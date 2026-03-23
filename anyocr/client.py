@@ -2,7 +2,7 @@ from pydantic import BaseModel, AfterValidator, Field
 from typing import Annotated
 from pathlib import Path
 
-from anyocr.types import OcrResponse, OcrRequest
+from anyocr.types import OcrResponse, OcrRequest, CostBreakdown
 
 import os
 
@@ -54,7 +54,6 @@ def _api_key_exists(value: str):
     Returns:
         the passed in value, after checking that it's non-empty
     """
-    print(value)
     if not value.strip():
         raise ValueError("No API key provided")
     return value.strip()
@@ -67,21 +66,53 @@ class AnyOcr(BaseModel):
     base_url: str | None = os.getenv("ANYOCR_BASE_URL", "http://localhost:7000")
     
     def process(
+        self,
         file: Path | str,
-        pages: str | list[int] | None = None
+        model: str,
+        pages: str | list[int] | None = None,
+        response_format: str = "markdown",
     ) -> OcrResponse:
         if isinstance(pages, str):
             pages = _process_page_range(pages)
 
-        request = OcrRequest(file_path=file, pages=pages)
+        request = OcrRequest(
+            file_path=file,
+            pages=pages,
+            response_format=response_format
+        )
+
+        return OcrResponse(
+            content=[],
+            page_count=0,
+            success=False,
+            error="Not implemented",
+            cost_breakdown=CostBreakdown()
+        )
 
 
 class AsyncAnyOcr(AnyOcr):
     async def process(
+        self,
         file: Path | str,
-        pages: str | list[int] | None = None
+        model: str,
+        pages: str | list[int] | None = None,
+        response_format: str = "markdown",
     ) -> OcrResponse:
         if isinstance(pages, str):
             pages = _process_page_range(pages)
 
-        request = OcrRequest(file_path=file, pages=pages)
+        request = OcrRequest(
+            file_path=file,
+            pages=pages,
+            response_format=response_format
+        )
+
+        return OcrResponse(
+            content=[],
+            page_count=0,
+            success=False,
+            error="Not implemented",
+            cost_breakdown=CostBreakdown()
+        )
+
+
