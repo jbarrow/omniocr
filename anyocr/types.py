@@ -68,7 +68,7 @@ class OcrResponse(BaseModel):
     Args:
         content:
     """
-    content: list[MarkdownResponse | HtmlResponse | JsonResponse]
+    content: list[MarkdownResponse | HtmlResponse | BlockResponse]
     page_count: int
     success: bool
     error: str | None = None

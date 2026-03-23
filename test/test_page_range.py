@@ -31,3 +31,10 @@ def test_misformatted_range_fails():
 
     with pytest.raises(ValueError):
         _process_page_range("1,")
+
+    with pytest.raises(ValueError):
+        _process_page_range("1.0")
+
+    with pytest.raises(ValueError):
+        _process_page_range("1,,2")
+
