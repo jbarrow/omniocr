@@ -1,6 +1,7 @@
 from pydantic import BaseModel, AfterValidator, Field
 from typing import Annotated
 from pathlib import Path
+from urllib.parse import urljoin
 
 from anyocr.types import OcrResponse, OcrRequest, CostBreakdown
 
@@ -64,7 +65,15 @@ class AnyOcr(BaseModel):
         default=os.getenv("ANYOCR_API_KEY", ""), validate_default=True
     )
     base_url: str | None = os.getenv("ANYOCR_BASE_URL", "http://localhost:7000")
+
+    @property
+    def _ocr_url(self) -> str:
+        return urljoin(self.base_url, "api/v1/ocr")
     
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {"X-API-Key": self.api_key}
+
     def process(
         self,
         file: Path | str,
@@ -74,38 +83,20 @@ class AnyOcr(BaseModel):
     ) -> OcrResponse:
         if isinstance(pages, str):
             pages = _process_page_range(pages)
+        
+        if isinstance(file, str):
+            file = Path(file)
 
-        request = OcrRequest(
-            file_path=file,
-            pages=pages,
-            response_format=response_format
-        )
-
-        return OcrResponse(
-            content=[],
-            page_count=0,
-            success=False,
-            error="Not implemented",
-            cost_breakdown=CostBreakdown()
-        )
-
-
-class AsyncAnyOcr(AnyOcr):
-    async def process(
-        self,
-        file: Path | str,
-        model: str,
-        pages: str | list[int] | None = None,
-        response_format: str = "markdown",
-    ) -> OcrResponse:
-        if isinstance(pages, str):
-            pages = _process_page_range(pages)
-
-        request = OcrRequest(
-            file_path=file,
-            pages=pages,
-            response_format=response_format
-        )
+        with open(file, "rb") as fp:
+            response = requests.post(
+                self._ocr_url,
+                files={"file": (file.name, fp, "application/pdf")},
+                data={
+                    "page_range": pages,
+                    "response_format": "markdown",
+                },
+                headers=self._headers
+            )
 
         return OcrResponse(
             content=[],
@@ -114,5 +105,6 @@ class AsyncAnyOcr(AnyOcr):
             error="Not implemented",
             cost_breakdown=CostBreakdown()
         )
+
 
 

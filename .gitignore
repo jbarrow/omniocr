@@ -1,5 +1,7 @@
 uv.lock
 
+
+*.egg-info
 *.pyc
 __pycache__
 
