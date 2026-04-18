@@ -2,45 +2,13 @@ from pydantic import BaseModel, AfterValidator, Field
 from typing import Annotated
 from pathlib import Path
 from urllib.parse import urljoin
+from PIL import Image
 
-from anyocr.types import OcrResponse, OcrRequest, CostBreakdown
+from omniocr.types import OcrResponse, CostBreakdown
+from omniocr.utils import _process_page_range
 
+import requests
 import os
-
-
-def _process_page_range(page_range: str) -> list[int]:
-    """Convert a string page range to a list of pages. For instance: "0-2,4,6"
-    should be converted to [0, 1, 2, 4, 6]. Raises an exception if the range isn't
-    valid (e.g. 4-2).
-
-    Args:
-        page_range: the string representation of the desired page range, supporting
-                    '-' and ',' as separators. Note that '-' is *inclusive*.
-
-    Returns:
-        the list of integers represented by the page range
-    """
-    pages  = []
-    groups = page_range.split(",")
-
-    for group in groups:
-        endpoints = group.split("-")
-
-        if len(endpoints) == 2:
-            start, end = endpoints
-            start, end = int(start), int(end)
-
-            if start > end:
-                raise ValueError(f"page range ({page_range}) is not valid")
-
-            pages.extend(range(start, end+1))
-        elif len(endpoints) == 1:
-            page = endpoints[0]
-            pages.append(int(page))
-        else:
-            raise ValueError(f"page range ({page_range}) not valid")
-
-    return pages
 
 
 def _api_key_exists(value: str):
@@ -60,11 +28,11 @@ def _api_key_exists(value: str):
     return value.strip()
 
 
-class AnyOcr(BaseModel):
+class OmniOcr(BaseModel):
     api_key: Annotated[str, AfterValidator(_api_key_exists)] = Field(
-        default=os.getenv("ANYOCR_API_KEY", ""), validate_default=True
+        default=os.getenv("OMNIOCR_API_KEY", ""), validate_default=True
     )
-    base_url: str | None = os.getenv("ANYOCR_BASE_URL", "http://localhost:7000")
+    base_url: str | None = os.getenv("OMNIOCR_BASE_URL", "http://localhost:8000")
 
     @property
     def _ocr_url(self) -> str:
@@ -72,31 +40,39 @@ class AnyOcr(BaseModel):
     
     @property
     def _headers(self) -> dict[str, str]:
-        return {"X-API-Key": self.api_key}
+        return {"X-API-KEY": self.api_key}
 
     def process(
         self,
-        file: Path | str,
+        file: Path | str | Image.Image,
         model: str,
         pages: str | list[int] | None = None,
         response_format: str = "markdown",
     ) -> OcrResponse:
+        # TODO(joe): add exponential backoff
         if isinstance(pages, str):
             pages = _process_page_range(pages)
         
         if isinstance(file, str):
             file = Path(file)
+            file_name = file.name
 
-        with open(file, "rb") as fp:
+        if isinstance(file, Image.Image):
+            # TODO(joe): allow for the OCR'ing of PIL images
+            pass
+
+        with open(file, "r") as fp:
             response = requests.post(
                 self._ocr_url,
-                files={"file": (file.name, fp, "application/pdf")},
+                files={"file": (file_name, fp, "application/pdf")},
                 data={
                     "page_range": pages,
                     "response_format": "markdown",
                 },
                 headers=self._headers
             )
+
+            print(response)
 
         return OcrResponse(
             content=[],

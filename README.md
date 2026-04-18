@@ -1,21 +1,21 @@
-# `anyocr`
+# `omniocr`
 
-Python packge for using AnyOcr: https://anyocr.ai
+Python packge for using OmniOcr: https://omniocr.ai
 
 ```
-pip install anyocr
+pip install omniocr
 ```
 
 ## Usage
 
-Get your API key from: https://anyocr.ai/
+Get your API key from: https://omniocr.ai/
 
 Then you can start to OCR documents with:
 
 ```sh
-export ANYOCR_API_KEY=<ANYOCR_API_KEY>
+export OMNIOCR_API_KEY=<OMNIOCR_API_KEY>
 
-anyocr examples/resources/sample.pdf \
+omniocr examples/resources/sample.pdf \
     --model=lightonocr-2-1b \
     --format=markdown \
     --pages "1-3" > output.md
@@ -24,10 +24,10 @@ anyocr examples/resources/sample.pdf \
 Alternatively, you can run it programmatically:
 
 ```py
-from anyocr import AnyOcr
+from omniocr import OmniOcr
 
 
-client = AnyOcr()
+client = OmniOcr()
 
 document = client.process(
     "examples/resources/sample.pdf",
@@ -41,7 +41,7 @@ print(document)
 
 ## Formats
 
-There are two _types_ of formats that `anyocr` supports:
+There are two _types_ of formats that `omniocr` supports:
 
 1. markdown conversion -- this is the simplest, the document is just converted to markdown, typically with placeholders for images
 2. block-based output -- if you need bounding boxes for _where_ the text comes from, you should use a model that supports bounding box outputs

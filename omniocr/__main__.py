@@ -2,8 +2,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Literal
 
-from anyocr import AnyOcr
-from anyocr.types import MarkdownResponse
+from omniocr import OmniOcr
+from omniocr.types import MarkdownResponse
 
 import os
 
@@ -14,10 +14,10 @@ def main():
     parser.add_argument("model", type=str)
     parser.add_argument("--format", type=str, default="markdown")
     parser.add_argument("--pages", type=str, default="")
-    parser.add_argument("--api-key", type=str, default=os.getenv("ANYOCR_API_KEY"))
+    parser.add_argument("--api-key", type=str, default=os.getenv("OMNIOCR_API_KEY"))
     args = parser.parse_args()
 
-    client = AnyOcr(api_key=args.api_key)
+    client = OmniOcr(api_key=args.api_key)
 
     response = client.process(
         file=args.document,

@@ -5,12 +5,12 @@ from pydantic import ValidationError
 
 
 def test_client_requires_apy_key():
-    os.environ["ANYOCR_API_KEY"] = ""
+    os.environ["OMNIOCR_API_KEY"] = ""
 
-    from anyocr import AnyOcr
+    from omniocr import OmniOcr
     with pytest.raises(ValidationError):
-        client = AnyOcr()
+        client = OmniOcr()
 
 def test_create_client_with_api_key():
-    from anyocr import AnyOcr
-    client = AnyOcr(api_key="Empty")
+    from omniocr import OmniOcr
+    client = OmniOcr(api_key="Empty")

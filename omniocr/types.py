@@ -19,20 +19,6 @@ class LayoutBlock(BaseModel):
     content: str
 
 
-class OcrRequest(BaseModel):
-    """OCR request format:
-
-    Args:
-        file_path: the local path of the file
-        page_range: the list of pages to be processed, or None for all pages
-                    (default is None)
-        response_format: what format you want the OCR to be returned in.
-    """
-    file_path: str | Path
-    page_range: list[int] | None = None
-    response_format: Literal["markdown", "html", "blocks"]
-
-
 class MarkdownResponse(BaseModel):
     markdown: str
     images: dict[str, str]

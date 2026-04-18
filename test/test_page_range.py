@@ -1,6 +1,6 @@
 import pytest
 
-from anyocr.client import _process_page_range
+from omniocr.client import _process_page_range
 
 
 def test_page_set():

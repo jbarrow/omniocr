@@ -1,9 +1,9 @@
-from anyocr import AsyncAnyOcr
+from omniocr import AsyncOmniOcr
 
 import asyncio
 
 
-client = AsyncAnyOcr()
+client = AsyncOmniOcr()
 
 async def main():
     response = await client.process(

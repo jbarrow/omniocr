@@ -1,10 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "anyocr"
+name = "omniocr"
 version = "0.1.0"
 description = "Run ~any open source OCR model behind a single API."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
+authors = [
+    { name = "Joe Barrow", email = "joseph.d.barrow@gmail.com" },
+]
+keywords = ["ocr", "pdf", "document", "text-extraction"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Text Processing",
+    "Typing :: Typed",
+]
 dependencies = [
+    "pillow>=12.1.1",
     "pydantic>=2.12.5",
+    "requests>=2.33.0",
+]
+
+[project.urls]
+Homepage = "https://omniocr.ai"
+
+[project.scripts]
+omniocr = "omniocr.__main__:main"
+
+[dependency-groups]
+dev = [
     "pytest>=9.0.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["omniocr"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "debug.py",
+    ".venv",
+    ".pytest_cache",
+    "*.egg-info",
 ]

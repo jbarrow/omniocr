@@ -1,7 +1,7 @@
-from anyocr import AnyOcr
+from omniocr import OmniOcr
 
 
-client = AnyOcr()
+client = OmniOcr()
 
 def main():
     response = client.process(
