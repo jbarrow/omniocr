@@ -1,14 +1,13 @@
 from pydantic import BaseModel, AfterValidator, Field
 from typing import Annotated
 from pathlib import Path
-from urllib.parse import urljoin
 from PIL import Image
 
 from omniocr.types import OcrResponse, CostBreakdown
-from omniocr.utils import _process_page_range
 
 import requests
 import os
+import mimetypes
 
 
 def _api_key_exists(value: str):
@@ -32,12 +31,14 @@ class OmniOcr(BaseModel):
     api_key: Annotated[str, AfterValidator(_api_key_exists)] = Field(
         default=os.getenv("OMNIOCR_API_KEY", ""), validate_default=True
     )
-    base_url: str | None = os.getenv("OMNIOCR_BASE_URL", "http://localhost:8000")
+    base_url: str = Field(
+        default_factory=lambda: os.getenv("OMNIOCR_BASE_URL", "https://omniocr.ai")
+    )
 
     @property
     def _ocr_url(self) -> str:
-        return urljoin(self.base_url, "api/v1/ocr")
-    
+        return f"{self.base_url.rstrip('/')}/api/v1/ocr"
+
     @property
     def _headers(self) -> dict[str, str]:
         return {"X-API-KEY": self.api_key}
@@ -50,37 +51,40 @@ class OmniOcr(BaseModel):
         response_format: str = "markdown",
     ) -> OcrResponse:
         # TODO(joe): add exponential backoff
-        if isinstance(pages, str):
-            pages = _process_page_range(pages)
-        
         if isinstance(file, str):
             file = Path(file)
-            file_name = file.name
 
         if isinstance(file, Image.Image):
             # TODO(joe): allow for the OCR'ing of PIL images
             pass
 
-        with open(file, "r") as fp:
+        page_range: str | None = None
+        if isinstance(pages, str):
+            page_range = pages
+        elif isinstance(pages, list):
+            page_range = ",".join(str(p) for p in pages)
+
+        content_type = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
+
+        data: dict[str, str] = {"model": model, "response_format": response_format}
+        if page_range is not None:
+            data["page_range"] = page_range
+
+        with open(file, "rb") as fp:
             response = requests.post(
                 self._ocr_url,
-                files={"file": (file_name, fp, "application/pdf")},
-                data={
-                    "page_range": pages,
-                    "response_format": "markdown",
-                },
-                headers=self._headers
+                files={"file": (file.name, fp, content_type)},
+                data=data,
+                headers=self._headers,
             )
 
-            print(response)
+        if response.status_code != 200:
+            return OcrResponse(
+                content=[],
+                page_count=0,
+                success=False,
+                error=f"{response.status_code}: {response.text}",
+                cost_breakdown=CostBreakdown(),
+            )
 
-        return OcrResponse(
-            content=[],
-            page_count=0,
-            success=False,
-            error="Not implemented",
-            cost_breakdown=CostBreakdown()
-        )
-
-
-
+        return OcrResponse.model_validate_json(response.content)
