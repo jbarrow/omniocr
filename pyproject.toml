@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniocr"
-version = "0.1.0"
+version = "0.1.1"
 description = "Run ~any open source OCR model behind a single API."
 readme = "README.md"
 requires-python = ">=3.10"
