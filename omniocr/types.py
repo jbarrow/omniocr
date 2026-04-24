@@ -59,3 +59,18 @@ class OcrResponse(BaseModel):
     success: bool
     error: str | None = None
     cost_breakdown: CostBreakdown
+
+
+JobState = Literal["pending", "running", "completed", "failed"]
+
+
+class JobStatus(BaseModel):
+    """Status of an asynchronous OCR job.
+
+    `result` is populated only when `status == "completed"`.
+    `error` is populated when `status == "failed"`.
+    """
+    job_id: str
+    status: JobState
+    result: OcrResponse | None = None
+    error: str | None = None

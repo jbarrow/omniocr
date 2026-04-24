@@ -1,2 +1,2 @@
 from omniocr.client import OmniOcr
-from omniocr.types import OcrResponse
+from omniocr.types import OcrResponse, JobStatus

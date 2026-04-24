@@ -3,10 +3,11 @@ from typing import Annotated
 from pathlib import Path
 from PIL import Image
 
-from omniocr.types import OcrResponse, CostBreakdown
+from omniocr.types import OcrResponse, CostBreakdown, JobStatus
 
 import requests
 import os
+import time
 import mimetypes
 
 
@@ -43,14 +44,18 @@ class OmniOcr(BaseModel):
     def _headers(self) -> dict[str, str]:
         return {"X-API-KEY": self.api_key}
 
-    def process(
+    def submit(
         self,
         file: Path | str | Image.Image,
         model: str,
         pages: str | list[int] | None = None,
         response_format: str = "markdown",
-    ) -> OcrResponse:
-        # TODO(joe): add exponential backoff
+    ) -> str:
+        """Upload a document and start an OCR job.
+
+        Returns the `job_id` — use `status()` or `poll()` to retrieve the
+        result.
+        """
         if isinstance(file, str):
             file = Path(file)
 
@@ -78,13 +83,83 @@ class OmniOcr(BaseModel):
                 headers=self._headers,
             )
 
+        if response.status_code not in (200, 202):
+            raise RuntimeError(f"submit failed {response.status_code}: {response.text}")
+
+        return JobStatus.model_validate_json(response.content).job_id
+
+    def status(self, job_id: str) -> JobStatus:
+        """Fetch the current status of a job without blocking."""
+        response = requests.get(
+            f"{self._ocr_url}/{job_id}",
+            headers=self._headers,
+        )
         if response.status_code != 200:
+            raise RuntimeError(f"status failed {response.status_code}: {response.text}")
+        return JobStatus.model_validate_json(response.content)
+
+    def poll(
+        self,
+        job_id: str,
+        interval: float = 2.0,
+        timeout: float | None = None,
+    ) -> OcrResponse:
+        """Poll `job_id` until it completes, fails, or `timeout` elapses.
+
+        Raises `TimeoutError` if `timeout` is reached before the job finishes.
+        """
+        start = time.monotonic()
+
+        while True:
+            s = self.status(job_id)
+
+            if s.status == "completed":
+                assert s.result is not None
+                return s.result
+
+            if s.status == "failed":
+                return OcrResponse(
+                    content=[],
+                    page_count=0,
+                    success=False,
+                    error=s.error,
+                    cost_breakdown=CostBreakdown(),
+                )
+
+            if timeout is not None and time.monotonic() - start > timeout:
+                raise TimeoutError(f"job {job_id} did not complete within {timeout}s")
+
+            time.sleep(interval)
+
+    def resume(
+        self,
+        job_id: str,
+        interval: float = 2.0,
+        timeout: float | None = None,
+    ) -> OcrResponse:
+        """Resume polling a previously-submitted job by id."""
+        return self.poll(job_id, interval=interval, timeout=timeout)
+
+    def process(
+        self,
+        file: Path | str | Image.Image,
+        model: str,
+        pages: str | list[int] | None = None,
+        response_format: str = "markdown",
+        poll_interval: float = 2.0,
+        timeout: float | None = None,
+    ) -> OcrResponse:
+        """Submit a document and block until the OCR job completes."""
+        try:
+            job_id = self.submit(
+                file=file, model=model, pages=pages, response_format=response_format,
+            )
+        except RuntimeError as e:
             return OcrResponse(
                 content=[],
                 page_count=0,
                 success=False,
-                error=f"{response.status_code}: {response.text}",
+                error=str(e),
                 cost_breakdown=CostBreakdown(),
             )
-
-        return OcrResponse.model_validate_json(response.content)
+        return self.poll(job_id, interval=poll_interval, timeout=timeout)
